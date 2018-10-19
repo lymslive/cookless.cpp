@@ -1,5 +1,7 @@
 *.o
 *.d
+*.a
+*.out
 lib/
 *.bak
 third/*/
