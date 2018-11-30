@@ -31,25 +31,24 @@ class TStr
 public:
 	typedef CharT* pointer;
 	typedef const CharT* const_pointer;
-	typedef const CharT* CPointer;
 	typedef CharT& reference;
 	typedef const CharT& const_reference;
 
 	TStr() : length_(0), string_(NULL) {}
-	TStr(CPointer pStr) : length_(tstrlen(pStr)), string_(pStr) {}
-	TStr(CPointer pStr, size_t iLength) : length_(iLength), string_(pStr) {}
+	TStr(const CharT* pStr) : length_(tstrlen(pStr)), string_(pStr) {}
+	TStr(const CharT* pStr, size_t iLength) : length_(iLength), string_(pStr) {}
 
 	size_t length() const { return length_; }
 
 	// c_str() 与 c_end() 可当作迭代器使用
-	CPointer c_str() const { return string_; }
-	CPointer c_end() const { return c_str() + length(); }
-	pointer begin() { return data(); }
-	pointer end() { return data() + length(); }
-	pointer data() { return const_cast<pointer>(c_str());}
+	const CharT* c_str() const { return string_; }
+	const CharT* c_end() const { return c_str() + length(); }
+	CharT* begin() { return data(); }
+	CharT* end() { return data() + length(); }
+	CharT* data() { return const_cast<CharT*>(c_str());}
 
 	// 直接当成C字符串指针使用
-	operator CPointer () const { return c_str();}
+	operator const CharT* () const { return c_str();}
 
 	bool operator< (const TStr& that) const
 	{
@@ -65,16 +64,16 @@ public:
 	bool operator!= (const TStr& that) const { return !(*this == that); }
 
 	// 索引未检查越界，像原始字符指针使用，支持负索引
-	reference operator[] (size_t i) { return *(data() + i); }
-	const_reference operator[] (size_t i) const { return *(c_str() + i); }
-	reference operator[] (int i)
+	CharT& operator[] (size_t i) { return *(data() + i); }
+	const CharT& operator[] (size_t i) const { return *(c_str() + i); }
+	CharT& operator[] (int i)
 	{
 		if (i < 0) {
 			i = length() + i;
 		}
 		return *(data() + i);
 	}
-	const_reference operator[] (int i) const
+	const CharT& operator[] (int i) const
 	{
 		if (i < 0) {
 			i = length() + i;
@@ -85,7 +84,7 @@ public:
 protected:
 	// 数据布局：存字符串的长度与指针
 	size_t   length_;
-	CPointer string_;
+	const CharT* string_;
 };
 	
 /* 不可变字符串值类，数据布局同父类 TStr
@@ -96,10 +95,6 @@ template <class CharT>
 class TString : public TStr<CharT>
 {
 public:
-	// 声明使用基类定义的类型
-	// using typename TStr<CharT>::CPointer;
-	// using typename TStr<CharT>::pointer;
-
 	// 构造函数系列
 	~TString() { _free();}
 	TString(const CharT* pStr = NULL) : TStr<CharT>(pStr)
@@ -116,17 +111,14 @@ public:
 	TString& operator= (const CharT* pthat);
 
 	// 加法重载
-	TString operator+ (const CharT* pthat);
+	TString operator+ (const CharT* pthat) const;
 	TString& operator+= (const CharT* pthat);
 
 protected:
-	// 申请可存一定字符串的内存空间，自动多申请一个尾部 NULL 字符的空间
 	CharT* _alloc(size_t n);
 	void _free();
-	// 独立克隆一份字符串，断开原来的字符串指针（不能释放源指针）
 	void _clone();
-	// 交换数据，便于实现一些算法，交换指针可利用析构自动释放字符串内存
-	void _swap(const TString& that);
+	void _swap(TString& that);
 }; // end of class TString
 
 template <typename CharT>
@@ -148,14 +140,14 @@ TString<CharT>& TString<CharT>::operator= (const CharT* pthat)
 }
 
 template <typename CharT>
-TString<CharT> TString<CharT>::operator+ (const CharT* pthat)
+TString<CharT> TString<CharT>::operator+ (const CharT* pthat) const
 {
 	if (pthat == NULL) {
 		return *this;
 	}
 	TString objTemp(this->string_, this->length_ + tstrlen(pthat));
 	if (objTemp.string_ != NULL) {
-		strcpy(objTemp.data() + objTemp.length_, pthat);
+		strcpy(objTemp.data() + this->length_, pthat);
 	}
 	return objTemp;
 }
@@ -174,6 +166,7 @@ TString<CharT>& TString<CharT>::operator+= (const CharT* pthat)
 	return *this;
 }
 
+// 申请可存一定字符串的内存空间，自动多申请一个尾部 NULL 字符的空间
 template <typename CharT>
 CharT* TString<CharT>::_alloc(size_t n)
 {
@@ -208,8 +201,9 @@ void TString<CharT>::_clone()
 	this->string_ = const_cast<const CharT*>(ptr);
 }
 
+// 交换数据，便于实现一些算法，交换指针可利用析构自动释放字符串内存
 template <typename CharT>
-void TString<CharT>::_swap(const TString& that)
+void TString<CharT>::_swap(TString& that)
 {
 	size_t iTemp = this->length_; this->length_ = that.length_; that.length_ = iTemp;
 	const CharT* pTemp = this->string_; this->string_ = that.string_; that.string_ = pTemp;
@@ -254,16 +248,16 @@ public:
 	TStrbuf& operator<< (const TStr<CharT> that) { return append(that); }
 	TStrbuf& operator+= (const TStr<CharT> that) { return append(that); }
 
-	TStrbuf operator+ (const CharT* pthat);
+	TStrbuf operator+ (const CharT* pthat) const;
 
-	size_t capacity();// { return capacity_; }
+	size_t capacity() const { return capacity_; }
 	// 扩展空间
 	TStrbuf& reserve(size_t nCap);
 	// 删除冗余空间，并将自己强转为基类返回，可另外指定截断长度
 	TString<CharT>* fixstr(size_t cutlen = 0);
 
 protected:
-	void _swap(const TStrbuf& that);
+	void _swap(TStrbuf& that);
 	TStrbuf& _append(const CharT* pStr, size_t iLength);
 	// 重新申请内存搬迁，有可能更小截断
 	void _realloc(size_t n);
@@ -271,9 +265,6 @@ protected:
 private:
 	size_t capacity_;
 }; // end of class TStrbuf
-
-template <typename CharT>
-size_t TStrbuf<CharT>::capacity() { return capacity_; }
 
 template <typename CharT>
 TStrbuf<CharT>::TStrbuf(size_t nCap)
@@ -306,14 +297,14 @@ TStrbuf<CharT>& TStrbuf<CharT>::operator= (const CharT* pthat)
 }
 
 template <class CharT>
-TStrbuf<CharT> TStrbuf<CharT>::operator+ (const CharT* pthat)
+TStrbuf<CharT> TStrbuf<CharT>::operator+ (const CharT* pthat) const
 {
 	if (pthat == NULL) {
 		return *this;
 	}
 	TStrbuf objTemp(this->string_, this->length_ + tstrlen(pthat));
 	if (objTemp.string_ != NULL) {
-		strcpy(objTemp.data() + objTemp.length_, pthat);
+		strcpy(objTemp.data() + this->length_, pthat);
 	}
 	return objTemp;
 }
@@ -375,7 +366,7 @@ void TStrbuf<CharT>::_realloc(size_t n)
 }
 
 template <typename CharT>
-void TStrbuf<CharT>::_swap(const TStrbuf& that)
+void TStrbuf<CharT>::_swap(TStrbuf& that)
 {
 	TString<CharT>::_swap(that);
 	size_t iTemp = capacity_; capacity_ = that.capacity_; that.capacity_ = iTemp;
