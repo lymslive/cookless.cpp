@@ -10,16 +10,16 @@ namespace utd
 
 	// 取字符串长度
 	template <class CharT>
-	size_t tstrlen<CharT>(const CharT* str)
+	size_t tstrlen(const CharT* str)
 	{
 		size_t n = 0;
 		for (const CharT* p = str; *p != CharT(0); ++p) ++n;
 		return n;
 	}
 	template<>
-	inline tstrlen<char>(const char* str) { return strlen(p); }
+	inline size_t tstrlen<char>(const char* str) { return strlen(str); }
 	template<>
-	inline tstrlen<wchar_t>(const wchar_t* str) { return wcslen(p); }
+	inline size_t tstrlen<wchar_t>(const wchar_t* str) { return wcslen(str); }
 
 /* 简单封装字符串指针的类
  * 无独立存储空间，信任指针目标，适用于静态文本或全局容器内的字符串
@@ -35,7 +35,7 @@ public:
 	typedef CharT& reference;
 	typedef const CharT& const_reference;
 
-	TStr() {} : length_(0), string_(NULL) {}
+	TStr() : length_(0), string_(NULL) {}
 	TStr(CPointer pStr) : length_(tstrlen(pStr)), string_(pStr) {}
 	TStr(CPointer pStr, size_t iLength) : length_(iLength), string_(pStr) {}
 
@@ -74,7 +74,7 @@ public:
 		}
 		return *(data() + i);
 	}
-	const_reference operator[] (int i)
+	const_reference operator[] (int i) const
 	{
 		if (i < 0) {
 			i = length() + i;
@@ -93,18 +93,22 @@ protected:
  * 但每个字符可修改
  */
 template <class CharT>
-class TString : public TStr<Chart>
+class TString : public TStr<CharT>
 {
 public:
+	// 声明使用基类定义的类型
+	using typename TStr<CharT>::CPointer;
+	using typename TStr<CharT>::pointer;
+
 	// 构造函数系列
 	~TString() { _free();}
-	TString(CPointer pStr = NULL) : TStr(pStr)
+	TString(CPointer pStr = NULL) : TStr<CharT>(pStr)
 		{ _clone(); }
-	TString(CPointer pStr, size_t iLength) : TStr(pStr, iLength)
+	TString(CPointer pStr, size_t iLength) : TStr<CharT>(pStr, iLength)
 		{ _clone(); }
-	TString(const TString& that) : TStr(that.c_str(), that.length())
+	TString(const TString& that) : TStr<CharT>(that.c_str(), that.length())
 		{ _clone(); }
-	TString(const TStr& that) : TStr(that.c_str(), that.length())
+	TString(const TStr<CharT>& that) : TStr<CharT>(that.c_str(), that.length())
 		{ _clone(); }
 
 	// 赋值操作符
@@ -124,12 +128,12 @@ public:
 	}
 
 	// 加法重载
-	TString operator+ (CPointer pthat);
+	TString operator+ (CPointer pthat)
 	{
 		if (pthat == NULL) {
 			return *this;
 		}
-		CString objTemp(string_, length_ + tstrlen(pthat));
+		TString objTemp(string_, length_ + tstrlen(pthat));
 		if (objTemp.string_ != NULL) {
 			strcpy(objTemp.data() + objTemp.length_, pthat);
 		}
@@ -141,7 +145,7 @@ public:
 		if (pthat == NULL) {
 			return *this;
 		}
-		CString objTemp(string_, length_ + tstrlen(pthat));
+		TString objTemp(string_, length_ + tstrlen(pthat));
 		if (objTemp.string_ != NULL) {
 			strcpy(objTemp.data() + objTemp.length_, pthat);
 		}
@@ -185,8 +189,8 @@ protected:
 	// 交换数据，便于实现一些算法，交换指针可利用析构自动释放字符串内存
 	void _swap(const TString& that)
 	{
-		size_t iTmep = length_; length_ = that.length_; that.length_ = iTemp;
-		CPointer pTmep = string_; string_ = that.string_; that.string_ = pTemp;
+		size_t iTemp = length_; length_ = that.length_; that.length_ = iTemp;
+		CPointer pTemp = string_; string_ = that.string_; that.string_ = pTemp;
 	}
 };
 
@@ -198,16 +202,20 @@ template <class CharT>
 class TStrbuf : public TString<CharT>
 {
 public:
+	// 声明使用基类定义的类型
+	using typename TStr<CharT>::CPointer;
+	using typename TStr<CharT>::pointer;
+
 	// 构造函数系列
-	~TStrbuf() { _free(); cap = 0; }
-	TStrbuf(CPointer pStr = NULL) : TString(pStr)
-		{ capcity_ = length_; }
-	TStrbuf(CPointer pStr, size_t iLength) : TString(pStr, iLength)
-		{ capcity_ = length_; }
-	TStrbuf(const TStrbuf& that) : TString(that)
-		{ capcity_ = length_; }
-	TStrbuf(const TStr& that) : TString(that)
-		{ capcity_ = length_; }
+	~TStrbuf() { capacity_ = 0; }
+	TStrbuf(CPointer pStr = NULL) : TString<CharT>(pStr)
+		{ capacity_ = length_; }
+	TStrbuf(CPointer pStr, size_t iLength) : TString<CharT>(pStr, iLength)
+		{ capacity_ = length_; }
+	TStrbuf(const TStrbuf& that) : TString<CharT>(that)
+		{ capacity_ = length_; }
+	TStrbuf(const TStr<CharT>& that) : TString<CharT>(that)
+		{ capacity_ = length_; }
 	TStrbuf(size_t nCap)
 	{
 		length_ = 0;
@@ -216,7 +224,7 @@ public:
 			ptr[0] = CharT(0);
 		}
 		string_ = const_cast<CPointer>(ptr);
-		capcity_ = nCap;
+		capacity_ = nCap;
 	}
 
 	// 赋值操作符
@@ -240,40 +248,40 @@ public:
 	{
 		return _append(pthat, tstrlen(pthat));
 	}
-	TStrbuf& append(const TStr& that)
+	TStrbuf& append(const TStr<CharT>& that)
 	{
 		return _append(that.c_str(), that.length());
 	}
 	TStrbuf& operator<< (CPointer pthat) { return append(pthat); }
 	TStrbuf& operator+= (CPointer pthat) { return append(pthat); }
-	TStrbuf& operator<< (const TStr that) { return append(that); }
-	TStrbuf& operator+= (const TStr that) { return append(that); }
+	TStrbuf& operator<< (const TStr<CharT> that) { return append(that); }
+	TStrbuf& operator+= (const TStr<CharT> that) { return append(that); }
 
 	TStrbuf operator+ (CPointer pthat)
 	{
 		if (pthat == NULL) {
 			return *this;
 		}
-		CStrbuf objTemp(string_, length_ + tstrlen(pthat));
+		TStrbuf objTemp(string_, length_ + tstrlen(pthat));
 		if (objTemp.string_ != NULL) {
 			strcpy(objTemp.data() + objTemp.length_, pthat);
 		}
 		return objTemp;
 	}
 
-	size_t capcity() { return capcity_; }
+	size_t capacity() { return capacity_; }
 
 	// 扩展空间
 	TStrbuf& reserve(size_t nCap)
 	{
-		if (nCap > capcity_)
+		if (nCap > capacity_)
 		{
 			_realloc(nCap);
 		}
 		return *this;
 	}
 	// 删除冗余空间，并将自己强转为基类返回，可另外指定截断长度
-	TString* fixstr(size_t cutlen = 0)
+	TString<CharT>* fixstr(size_t cutlen = 0)
 	{
 		size_t nCap = length_;
 		if (cutlen > 0 && cutlen < this->length_)
@@ -287,15 +295,15 @@ public:
 protected:
 	void _swap(const TStrbuf& that)
 	{
-		TString::_swap(that);
-		size_t iTmep = capcity_; capcity_ = that.capcity_; that.capcity_ = iTemp;
+		TString<CharT>::_swap(that);
+		size_t iTemp = capacity_; capacity_ = that.capacity_; that.capacity_ = iTemp;
 	}
 
 	TStrbuf& _append(CPointer pStr, size_t iLength)
 	{
 		size_t newLen = length_ + iLength;
-		if (newLen > capcity_) {
-			size_t nCap = capcity_ + (newLen - capcity_) * 2;
+		if (newLen > capacity_) {
+			size_t nCap = capacity_ + (newLen - capacity_) * 2;
 			reserve(nCap);
 		}
 		strcpy(data() + length(), pStr);
@@ -321,11 +329,11 @@ protected:
 			::operator delete(data());
 		}
 		string_ = const_cast<CPointer>(ptr);
-		capcity_ = n;
+		capacity_ = n;
 	}
 
 private:
-	size_t capcity_;
+	size_t capacity_;
 };
 
 // 定义最常用的 char 类字符串
