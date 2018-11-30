@@ -6,11 +6,12 @@ void disp(const char* msg, const utd::CStr& s)
 	printf("%s: [0x%x][%d]->%s\n", msg, s.c_str(), s.length(), s.c_str());
 }
 
-
+#if 1
 void disp(const char* msg, const utd::CStrbuf& s) 
 {
 	printf("%s: [0x%x][%d/%d]->%s\n", msg, s.c_str(), s.length(), s.capacity(), s.c_str());
 }
+#endif
 
 void report_section(const char* msg)
 {
