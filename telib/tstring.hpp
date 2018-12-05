@@ -2,6 +2,8 @@
 #define TSTRINGS_HPP__
 
 #include "tstr.hpp"
+#include <memory> // for allocator
+#include <algorithm> // for swap
 
 namespace utd
 {
@@ -13,21 +15,9 @@ const StringT operator+ (const StringT& lhs, const StringU& rhs)
 	return StringT(lhs) += rhs;
 }
 
-template <typename StringT, typename CharT>
-const StringT operator+ (const StringT& lhs, const CharT& rhs)
-{
-	return StringT(lhs) += rhs;
-}
-
 // 只在末尾删除特定字符串
 template <typename StringT, typename StringU>
 const StringT operator- (const StringT& lhs, const StringU& rhs)
-{
-	return StringT(lhs) -= rhs;
-}
-
-template <typename StringT, typename CharT>
-const StringT operator- (const StringT& lhs, const CharT& rhs)
 {
 	return StringT(lhs) -= rhs;
 }
@@ -43,58 +33,95 @@ const StringT operator* (const StringT& lhs, size_t rhs)
  * 有独立空间字符串，构造时申请复制空间，不可再增长
  * 但每个字符可修改
  */
-template <class CharT>
-class TString : public TStr<CharT>
+#define _TSTRING TString<CharT, Traits, Alloc>
+template <typename CharT, typename Traits = std::char_traits<CharT>, typename Alloc = std::allocator<CharT> >
+class TString : public TStr<CharT, Traits>
 {
 public:
 	// 构造函数系列
 	~TString() { _free();}
-	TString(const CharT* pStr = NULL) : TStr<CharT>(pStr)
-		{ _clone(); }
-	TString(const CharT* pStr, size_t iLength) : TStr<CharT>(pStr, iLength)
-		{ _clone(); }
-	TString(const TString& that) : TStr<CharT>(that.c_str(), that.length())
-		{ _clone(); }
-	TString(const TStr<CharT>& that) : TStr<CharT>(that.c_str(), that.length())
-		{ _clone(); }
+	TString() {}
+	TString(const TString& that) : _TSTR(that.c_str(), that.length()) { _clone(); }
+	// 从常规字符串构造，信任字符串以 NULL 字符结尾
+	TString(const CharT* pStr) : _TSTR(pStr) { _clone(); }
+	// TString(const CharT* pStr, size_t nLength) : _TSTR(pStr, nLength) { _clone(); }
+	TString(const _TSTR& that) : _TSTR(that.c_str(), that.length()) { _clone(); }
+	// 在源字符串基础上扩展预期长度
+	TString(const _TSTR& that, size_t enlarge);
+	// 拷贝一段字符串区间 [First, Last) ，Last 未必以 NULL 字符结尾
+	TString(const CharT* pFirst, const CharT* pLast);
+	// 构造一个定长字符串，填充以特定字符
+	TString(size_t nLength, const CharT& chat);
 
 	// 赋值操作符
 	TString& operator= (const TString& that);
-	TString& operator= (const TStr<CharT>& that);
+	TString& operator= (const _TSTR& that);
 
 	// 可修改字符串缓冲区内容
 	CharT* data() { return const_cast<CharT*>(this->c_str());}
 	CharT* begin() { return data(); }
-	CharT* end() { return data() + length(); }
+	CharT* end() { return data() + this->length(); }
 	CharT& operator[] (size_t i) { return *(data() + i); }
-	CharT& operator[] (int i);
+	CharT& operator[] (int i); // 允许负索引
 
-	// 加法重载
-	TString& operator+= (const TStr<CharT>& that);
-	TString& operator-= (const TStr<CharT>& that);
-	TString& operator+= (const CharT& chat);
-	TString& operator-= (const CharT& chat);
+	// 操作符重载
+	TString& operator+= (const _TSTR& that) { return add_suffix(that); }
+	TString& operator-= (const _TSTR& that) { return sub_suffix(that); }
+	TString& operator+= (const CharT& chat) { return add_suffix(chat); }
+	TString& operator-= (const CharT& chat) { return sub_suffix(chat); }
+	TString& operator*= (size_t times) { return repeat(times); }
 
-	TString& operator*= (size_t times);
-
+	// 操作符函数别名，在串接字符串时可额外指定一小段（固定）分隔符
+	TString& add_suffix(const _TSTR& that, const CharT* pSep = NULL);
+	TString& sub_suffix(const _TSTR& that, const CharT* pSep = NULL);
+	TString& add_suffix(const CharT& chat, const CharT* pSep = NULL);
+	TString& sub_suffix(const CharT& chat, const CharT* pSep = NULL);
+	TString& repeat(size_t times, const CharT* pSep = NULL);
 protected:
 	CharT* _alloc(size_t n);
 	void _free();
-	void _clone();
+	void _clone(size_t nLength = 0);
 	void _swap(TString& that);
 }; // end of class TString
 
-template <typename CharT>
-CharT& TString<CharT>::operator[] (int i)
+template <typename CharT, typename Traits, typename Alloc>
+CharT& _TSTRING::operator[] (int i)
 {
 	if (i < 0) {
-		i = length() + i;
+		i = this->length() + i;
 	}
 	return *(data() + i);
 }
 
-template <typename CharT>
-TString<CharT>& TString<CharT>::operator= (const TString& that)
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING::TString(const _TSTR& that, size_t enlarge)
+{
+	this->length_ = that.length() + enlarge;
+	this->string_ = that.c_str();
+	_clone(that.length());
+}
+
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING::TString(const CharT* pFirst, const CharT* pLast)
+{
+	this->length_ = pLast - pFirst;
+	this->string_ = pFirst;
+	_clone();
+}
+
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING::TString(size_t nLength, const CharT& chat)
+{
+	this->length_ = nLength;
+	CharT* ptr = _alloc(this->length_);
+	if (ptr != NULL) {
+		while (nLength-- > 0) ptr[nLength] = chat;
+	}
+	this->string_ = const_cast<const CharT*>(ptr);
+}
+
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING& _TSTRING::operator= (const TString& that)
 {
 	if (this != &that) {
 		TString objTemp(that);
@@ -103,41 +130,51 @@ TString<CharT>& TString<CharT>::operator= (const TString& that)
 	return *this;
 }
 
-template <typename CharT>
-TString<CharT>& TString<CharT>::operator= (const TStr<CharT>& that)
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING& _TSTRING::operator= (const _TSTR& that)
 {
 	TString objTemp(that);
 	_swap(objTemp);
 	return *this;
 }
 
-template <typename CharT>
-TString<CharT>& TString<CharT>::operator+= (const TStr<CharT>& that)
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING& _TSTRING::add_suffix(const _TSTR& that, const CharT* pSep)
 {
 	if (that.empty()) {
 		return *this;
 	}
-	TString objTemp(this->string_, this->length_ + that.length());
+
+	_TSTR strSep(pSep);
+	size_t nLarger = strSep.length() + that.length();
+	TString objTemp(*this, nLarger);
 	if (objTemp.string_ != NULL) {
-		strcpy(objTemp.data() + objTemp.length_, pthat);
+		if (pSep != NULL) {
+			Traits::copy(objTemp.data() + this->length_, strSep.c_str(), strSep.length());
+		}
+		Traits::copy(objTemp.data() + this->length_ + strSep.length(), that.c_str(), that.length());
 	}
 	_swap(objTemp);
 	return *this;
 }
 
-template <typename CharT>
-TString<CharT>& TString<CharT>::operator+= (const CharT& chat)
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING& _TSTRING::add_suffix(const CharT& chat, const CharT* pSep)
 {
-	TString objTemp(this->string_, this->length_ + 1);
+	_TSTR strSep(pSep);
+	TString objTemp(*this, strSep.length() + 1);
 	if (objTemp.string_ != NULL) {
+		if (pSep != NULL) {
+			Traits::copy(objTemp.data() + this->length_, strSep.c_str(), strSep.length());
+		}
 		objTemp[-1] = chat;
 	}
 	_swap(objTemp);
 	return *this;
 }
 
-template <typename CharT>
-TString<CharT>& TString<CharT>::operator-= (const TStr<CharT>& that)
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING& _TSTRING::sub_suffix(const _TSTR& that, const CharT* pSep)
 {
 	if (that.empty() || this->emtpy()) {
 		return *this;
@@ -149,11 +186,15 @@ TString<CharT>& TString<CharT>::operator-= (const TStr<CharT>& that)
 	}
 	(*this)[iPos] = CharT(0);
 	this->length_ = iPos;
+	// 再抹除可能的后缀分隔符
+	if (pSep != NULL) {
+		sub_suffix(_TSTR(pSep));
+	}
 	return *this;
 }
 
-template <typename CharT>
-TString<CharT>& TString<CharT>::operator-= (const CharT& chat)
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING& _TSTRING::sub_suffix(const CharT& chat, const CharT* pSep)
 {
 	if (this->emtpy()) {
 		return *this;
@@ -164,51 +205,86 @@ TString<CharT>& TString<CharT>::operator-= (const CharT& chat)
 	}
 	// 直接在源地址上填 0 抹除
 	(*this)[--this->length_] = CharT(0);
+	if (pSep != NULL) {
+		sub_suffix(_TSTR(pSep));
+	}
+	return *this;
+}
+
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING& _TSTRING::repeat(size_t times, const CharT* pSep)
+{
+	if (--times <= 0) {
+		return *this;
+	}
+	_TSTR strSep(pSep);
+	size_t nLarger = times * (strSep.length() + this->length());
+	TString objTemp(*this, nLarger);
+	if (objTemp.string_ == NULL) {
+		return *this;
+	}
+	CharT *dst = objTemp.data() + this->length();
+	while (times-- > 0) {
+		if (pSep != NULL) {
+			Traits::copy(dst, strSep.c_str(), strSep.length());
+			dst += strSep.length();
+		}
+		Traits::copy(dst, this->c_str(), this->length());
+		dst += this->length();
+	}
+	_swap(objTemp);
 	return *this;
 }
 
 // 申请可存一定字符串的内存空间，自动多申请一个尾部 NULL 字符的空间
-template <typename CharT>
-CharT* TString<CharT>::_alloc(size_t n)
+template <typename CharT, typename Traits, typename Alloc>
+CharT* _TSTRING::_alloc(size_t n)
 {
-	CharT* pNew = static_cast<CharT*>(::operator new(sizeof(CharT) * (n+1)));
+	CharT* pNew = Alloc().allocate(n+1);
 	pNew[n] = CharT(0);
 	return pNew;
 }
 
-template <typename CharT>
-void TString<CharT>::_free()
+template <typename CharT, typename Traits, typename Alloc>
+void _TSTRING::_free()
 {
 	if (this->string_ != NULL)
 	{
 		CharT* ptr = this->data();
-		::operator delete(ptr);
+		Alloc().deallocate(ptr, this->length() + 1);
 		this->string_ = NULL;
 	}
 	this->length_ = 0;
 }
 
 // 独立克隆一份字符串，断开原来的字符串指针（不能释放源指针）
-// 可以预设 this->length_ 比源 string_ 指针长
-template <typename CharT>
-void TString<CharT>::_clone()
+// 可以预设 this->length_ 比源 string_ 指针长，或拷贝部分字符串
+template <typename CharT, typename Traits, typename Alloc>
+void _TSTRING::_clone(size_t nLength)
 {
 	if (this->length_ == 0 || this->string_ == NULL) {
 		return;
 	}
 	CharT* ptr = _alloc(this->length_);
+	if (nLength <= 0) {
+		nLength = this->length_;
+	}
 	if (ptr != NULL) {
-		strcpy(ptr, this->string_);
+		Traits::copy(ptr, this->string_, nLength);
+		if (nLength < this->length_) {
+			(*this)[nLength] = CharT(0);
+		}
 	}
 	this->string_ = const_cast<const CharT*>(ptr);
 }
 
 // 交换数据，便于实现一些算法，交换指针可利用析构自动释放字符串内存
-template <typename CharT>
-void TString<CharT>::_swap(TString& that)
+template <typename CharT, typename Traits, typename Alloc>
+inline
+void _TSTRING::_swap(TString& that)
 {
-	size_t iTemp = this->length_; this->length_ = that.length_; that.length_ = iTemp;
-	const CharT* pTemp = this->string_; this->string_ = that.string_; that.string_ = pTemp;
+	std::swap(this->length_, that.length_);
+	std::swap(this->string_, that.string_);
 }
 
 typedef TString<char> CString;

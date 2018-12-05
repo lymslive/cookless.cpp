@@ -1,27 +1,18 @@
 #ifndef TSTR_HPP__
 #define TSTR_HPP__
 
+#include <string> // for char_traits
 namespace utd
 {
 
-// 取字符串长度 
-template <typename CharT>
-size_t tstrlen(const CharT* str)
-{
-	size_t n = 0;
-	for (const CharT* p = str; *p != CharT(0); ++p) ++n;
-	return n;
-}
-template<>
-inline size_t tstrlen<char>(const char* str) { return strlen(str); }
-template<>
-inline size_t tstrlen<wchar_t>(const wchar_t* str) { return wcslen(str); }
+// using std::char_traits;
 
 /* 简单封装字符串指针的类
  * 无独立存储空间，信任指针目标，适用于静态文本或全局容器内的字符串
  * 字符串比较，优先比较长度，因为可利用保存的长度信息
  */
-template <typename CharT>
+#define _TSTR TStr<CharT, Traits>
+template <typename CharT, typename Traits = std::char_traits<CharT> >
 class TStr
 {
 public:
@@ -31,7 +22,7 @@ public:
 	typedef const CharT& const_reference;
 
 	TStr() : length_(0), string_(NULL) {}
-	TStr(const CharT* pStr) : length_(tstrlen(pStr)), string_(pStr) {}
+	TStr(const CharT* pStr) : length_(Traits::length(pStr)), string_(pStr) {}
 	TStr(const CharT* pStr, size_t iLength) : length_(iLength), string_(pStr) {}
 
 	size_t length() const { return length_; }
@@ -51,11 +42,11 @@ public:
 	// 比较运算符
 	bool operator< (const TStr& that) const
 	{
-		return length() < that.length() || strcmp(c_str(), that.c_str()) < 0;
+		return length() < that.length() || Traits::compare(c_str(), that.c_str(), that.length()) < 0;
 	}
 	bool operator== (const TStr& that) const
 	{
-		return c_str() == that.c_str() || (length() == that.length() && strcmp(c_str(), that.c_str()) == 0);
+		return c_str() == that.c_str() || (length() == that.length() && Traits::compare(c_str(), that.c_str(), length()) == 0);
 	}
 	bool operator> (const TStr& that) const { return that < *this; }
 	bool operator<= (const TStr& that) const { return !(that < *this); }
@@ -74,13 +65,43 @@ protected:
 	const CharT* string_;
 };
 
-template <typename CharT>
-const CharT& TStr<CharT>::operator[] (int i) const
+template <typename CharT, typename Traits> inline
+const CharT& _TSTR::operator[] (int i) const
 {
 	if (i < 0) {
 		i = length() + i;
 	}
 	return *(c_str() + i);
+}
+
+template <typename CharT, typename Traits>
+bool _TSTR::has_prefix(const _TSTR& that) const
+{
+	if (that.empty()) {
+		return true;
+	}
+
+	if (this->length() < that.length()) {
+		return false;
+	}
+
+	return Traits::compare(this->c_str(), that.c_str(), that.length()) == 0;
+}
+
+template <typename CharT, typename Traits>
+size_t _TSTR::suffix_of(const _TSTR& that) const
+{
+	if (that.empty()) {
+		return true;
+	}
+
+	if (this->length() < that.length()) {
+		return false;
+	}
+
+	const CharT *pThat = that.c_str(); 
+	const CharT *pThis = this->c_str() + this->length() - that.length();
+	return Traits::compare(pThis, pThat, that.length()) == 0;
 }
 
 typedef TStr<char> CStr;
