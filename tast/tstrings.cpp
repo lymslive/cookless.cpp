@@ -27,8 +27,17 @@ void report_section_h2(const char* msg)
 #define TASTH1(s) report_section_h1(s)
 #define TASTH2(s) report_section_h2(s)
 
+int predebug()
+{
+	TASTH1("BUG 调试");
+	utd::CStr objStr(NULL);
+	DISP(objStr);
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
+	predebug();
 	TASTH1("基础构造对象");
 
 	TASTH2("从字面字符串构造对象");
@@ -72,11 +81,6 @@ int main(int argc, char *argv[])
 	DISP(objString12);
 	DISP(objStrbuf12);
 
-	objStrbuf1 << objStr1;
-	DISP(objStr1);
-	DISP(objStrbuf1);
-	printf("objStrbuf1 capacity: %d\n", objStrbuf1.capacity());
-
 	TASTH1("索引运算符支持");
 	printf("objStrbuf1[0]: %c; objStrbuf1[-1]: %c\n", objStrbuf1[0], objStrbuf1[-1]);
 	objStrbuf1[0] = 'B';
@@ -99,6 +103,11 @@ int main(int argc, char *argv[])
 	DISP(objString1);
 	objStrbuf1 += objStr1;
 	DISP(objStrbuf1);
+
+	objStrbuf1 << objStr1;
+	DISP(objStr1);
+	DISP(objStrbuf1);
+	printf("objStrbuf1 capacity: %d\n", objStrbuf1.capacity());
 
 	return 0;
 }

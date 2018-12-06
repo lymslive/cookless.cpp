@@ -21,9 +21,14 @@ public:
 	typedef CharT& reference;
 	typedef const CharT& const_reference;
 
-	TStr() : length_(0), string_(NULL) {}
-	TStr(const CharT* pStr) : length_(Traits::length(pStr)), string_(pStr) {}
-	TStr(const CharT* pStr, size_t iLength) : length_(iLength), string_(pStr) {}
+	// 拷贝与赋值构造函数按默认即可。主要实现从 C 字符串构造
+	TStr(const CharT* pStr = NULL) : length_(0), string_(NULL)
+	{
+		if (pStr != NULL) {
+			length_ = Traits::length(pStr);
+			string_ = pStr;
+		}
+	}
 
 	size_t length() const { return length_; }
 	bool empty() const { return length_ == 0 || string_ == NULL; }

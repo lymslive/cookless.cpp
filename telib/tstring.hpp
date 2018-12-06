@@ -41,13 +41,10 @@ public:
 	// 构造函数系列
 	~TString() { _free();}
 	TString() {}
-	TString(const TString& that) : _TSTR(that.c_str(), that.length()) { _clone(); }
+	TString(const TString& that);
 	// 从常规字符串构造，信任字符串以 NULL 字符结尾
 	TString(const CharT* pStr) : _TSTR(pStr) { _clone(); }
-	// TString(const CharT* pStr, size_t nLength) : _TSTR(pStr, nLength) { _clone(); }
-	TString(const _TSTR& that) : _TSTR(that.c_str(), that.length()) { _clone(); }
-	// 在源字符串基础上扩展预期长度
-	TString(const _TSTR& that, size_t enlarge);
+	TString(const _TSTR& that) : _TSTR(that) { _clone(); }
 	// 拷贝一段字符串区间 [First, Last) ，Last 未必以 NULL 字符结尾
 	TString(const CharT* pFirst, const CharT* pLast);
 	// 构造一个定长字符串，填充以特定字符
@@ -56,6 +53,7 @@ public:
 	// 赋值操作符
 	TString& operator= (const TString& that);
 	TString& operator= (const _TSTR& that);
+	TString& operator= (const CharT* pthat) { return operator=(_TSTR(pthat)); }
 
 	// 可修改字符串缓冲区内容
 	CharT* data() { return const_cast<CharT*>(this->c_str());}
@@ -77,11 +75,16 @@ public:
 	TString& add_suffix(const CharT& chat, const CharT* pSep = NULL);
 	TString& sub_suffix(const CharT& chat, const CharT* pSep = NULL);
 	TString& repeat(size_t times, const CharT* pSep = NULL);
+
 protected:
 	CharT* _alloc(size_t n);
 	void _free();
 	void _clone(size_t nLength = 0);
 	void _swap(TString& that);
+
+private:
+	// 在源字符串基础上扩展预期长度，为扩充字符串内部使用
+	TString(const _TSTR& that, size_t enlarge);
 }; // end of class TString
 
 template <typename CharT, typename Traits, typename Alloc>
@@ -91,6 +94,14 @@ CharT& _TSTRING::operator[] (int i)
 		i = this->length() + i;
 	}
 	return *(data() + i);
+}
+
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING::TString(const TString& that)
+{
+	this->length_ = that.length();
+	this->string_ = that.c_str();
+	_clone();
 }
 
 template <typename CharT, typename Traits, typename Alloc>
