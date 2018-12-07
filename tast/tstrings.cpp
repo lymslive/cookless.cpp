@@ -1,46 +1,14 @@
 // #include "tstrings/tstrings.hpp"
+#include "utast.hpp"
 #include "telib/tstrbuf.hpp"
 #include <cstdio>
+#include <cctype>
 
-void disp(const char* msg, const utd::CStr& s) 
+TAST(TStrsTast, Ctor)
 {
-	printf("%s: [0x%x][%d]->%s\n", msg, s.c_str(), s.length(), s.c_str());
-}
+	H1("基础构造对象");
 
-void disp(const char* msg, const utd::CStrbuf& s) 
-{
-	printf("%s: [0x%x][%d/%d]->%s\n", msg, s.c_str(), s.length(), s.capacity(), s.c_str());
-}
-
-void report_section_h1(const char* msg)
-{
-	printf("/* *********** %s *********** */\n", msg);
-}
-
-void report_section_h2(const char* msg)
-{
-	printf("/* ----------- %s ----------- */\n", msg);
-}
-
-#define DISP(s) disp(#s, (s))
-#define DISPL(s) displ(#s, &s)
-#define TASTH1(s) report_section_h1(s)
-#define TASTH2(s) report_section_h2(s)
-
-int predebug()
-{
-	TASTH1("BUG 调试");
-	utd::CStr objStr(NULL);
-	DISP(objStr);
-	return 0;
-}
-
-int main(int argc, char *argv[])
-{
-	predebug();
-	TASTH1("基础构造对象");
-
-	TASTH2("从字面字符串构造对象");
+	H2("从字面字符串构造对象");
 	const char* pLit1 = "Hello Word!";
 	utd::CStr objStr1(pLit1);
 	utd::CString objString1(pLit1);
@@ -49,7 +17,7 @@ int main(int argc, char *argv[])
 	DISP(objString1);
 	DISP(objStrbuf1);
 
-	TASTH2("从低层字符串类构造对象");
+	H2("从低层字符串类构造对象");
 	utd::CString objString2(objStr1);
 	utd::CStrbuf objStrbuf2(objStr1);
 	utd::CStrbuf objStrbuf3(objString1);
@@ -57,7 +25,7 @@ int main(int argc, char *argv[])
 	DISP(objStrbuf2);
 	DISP(objStrbuf3);
 
-	TASTH2("默认空构造对象");
+	H2("默认空构造对象");
 	utd::CStr objStr0;
 	utd::CString objString0;
 	utd::CStrbuf objStrbuf0;
@@ -65,7 +33,7 @@ int main(int argc, char *argv[])
 	DISP(objString0);
 	DISP(objStrbuf0);
 
-	TASTH2("拷贝构造函数()");
+	H2("拷贝构造函数()");
 	utd::CStr objStr11(objStr1);
 	utd::CString objString11(objString1);
 	utd::CStrbuf objStrbuf11(objStrbuf1);
@@ -73,41 +41,78 @@ int main(int argc, char *argv[])
 	DISP(objString11);
 	DISP(objStrbuf11);
 
-	TASTH2("拷贝构造函数=");
+	H2("拷贝构造函数=");
 	utd::CStr objStr12 = objStr1;
 	utd::CString objString12 = objString1;
 	utd::CStrbuf objStrbuf12 = objStrbuf1;
 	DISP(objStr12);
 	DISP(objString12);
 	DISP(objStrbuf12);
+}
 
-	TASTH1("索引运算符支持");
-	printf("objStrbuf1[0]: %c; objStrbuf1[-1]: %c\n", objStrbuf1[0], objStrbuf1[-1]);
-	objStrbuf1[0] = 'B';
-	objStrbuf1[-1] = 'E';
-	printf("objStrbuf1[0]: %c; objStrbuf1[-1]: %c\n", objStrbuf1[0], objStrbuf1[-1]);
-	DISP(objStrbuf1);
+TAST(CStrTast, Usage)
+{
+	H1("CStr 类用法");
+	utd::CStr str = "abcdefg";
+	DISP(str);
 
-	for (auto it = objString1.begin(); it != objString1.end(); ++it)
+	H2("索引与负索引");
+	println("index str[0]=%c, [-1]=%c, [6]=%c", str[0], str[6], str[-1]);
+	char charray[8];
+	for (int i = 0; i < str.length(); ++i)
 	{
-		*it = *it + 1;
+		printf("%c", str[i]+7);
+		charray[i] = str[i] + 7;
 	}
-	DISP(objString1);
+	charray[7] = char(0);
+	printf("\n"); // println() 宏不传参报错
 
-	TASTH1("修改运算符");
+	H2("c_str() -- c_end() 迭代器");
+	for (const char* p = str.c_str(); p != str.c_end(); ++p)
+	{
+		printf("%c", toupper(*p));
+	}
+	printf("\n");
 
-	TASTH2("加法运算符支持");
-	objString1 = "abcxyz";
-	DISP(objString1);
-	objString1 = objString1 + objString1 + "!!!";
-	DISP(objString1);
-	objStrbuf1 += objStr1;
-	DISP(objStrbuf1);
+	H2("字符串比较");
+	utd::CStr str2 = charray;
+	DISP(str2);
+	SEE(str < str2, true);
+	SEE(str > str2, false);
+	SEE(str <= str2, true);
+	SEE(str >= str2, false);
+	SEE(str == str2, false);
+	SEE(str != str2, true);
 
-	objStrbuf1 << objStr1;
-	DISP(objStr1);
-	DISP(objStrbuf1);
-	printf("objStrbuf1 capacity: %d\n", objStrbuf1.capacity());
+	H2("与字面字符串比较");
+	SEE(str == "abcdefg", true);
+	SEE(str == "abcdef", false);
+	SEE(str == "abcdefh", false);
+	SEE(str > "abcdef", true);
+	SEE(str < "abcdefh", true);
 
+	H2("前后缀判断");
+	SEE(str.has_prefix("ab"), true);
+	SEE(str.has_prefix("AB"), false);
+	SEE(str.has_suffix("g"), true);
+	SEE(str.has_suffix("G"), true);
+}
+
+int predebug()
+{
+	H1("BUG 调试");
+	utd::CStr objStr(NULL);
+	DISP(objStr);
 	return 0;
 }
+
+int main(int argc, char *argv[])
+{
+	predebug();
+	DO_TAST(TStrsTast, Ctor);
+	DO_TAST(CStrTast, Usage);
+
+	return SEE_RESULT;
+}
+
+// VMAKE: g++ -g -I .. tstrings.cpp

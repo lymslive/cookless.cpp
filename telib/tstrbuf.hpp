@@ -5,20 +5,6 @@
 namespace utd
 {
 
-// 与数字相加：扩充容量
-template <typename StringT>
-const StringT operator+ (const StringT& lhs, size_t rhs)
-{
-	return StringT(lhs) += rhs;
-}
-
-// 与数字相加：减少容量
-template <typename StringT>
-const StringT operator- (const StringT& lhs, size_t rhs)
-{
-	return StringT(lhs) -= rhs;
-}
-
 /* 用于构造可增长的字符串
  * 在父类 TString 的基础上添加预留容量数据
  * 保守扩展内存策略：多申请差额的 2 倍
@@ -46,11 +32,13 @@ public:
 	TStrbuf& append(const _TSTR& that) { return add_suffix(that); }
 	TStrbuf& operator<< (const _TSTR that) { return append(that); }
 
+	// +-/ 运算语义类似 TString ，优化覆盖版
 	TStrbuf& operator+= (const _TSTR that) { return add_suffix(that); }
 	TStrbuf& operator-= (const _TSTR& that) { return sub_suffix(that); }
 	TStrbuf& operator+= (const CharT& chat) { return add_suffix(chat); }
 	TStrbuf& operator-= (const CharT& chat) { return sub_suffix(chat); }
 	TStrbuf& operator*= (size_t times) { return repeat(times); }
+	// 与数字相加：扩充容量；与数字相加：减少容量
 	TStrbuf& operator+= (size_t nCap) { return add_capacity(nCap); }
 	TStrbuf& operator-= (size_t nCap) { return sub_capacity(nCap); }
 
@@ -70,6 +58,7 @@ public:
 	// 删除冗余空间，并将自己强转为基类返回，可另外指定截断长度
 	_TSTRING* shrink(size_t cutlen = 0);
 
+	void disp(FILE* fp = stdout) const;
 protected:
 	void _capacity_syn() { this->capacity_ = this->length_; }
 	void _swap(TStrbuf& that);
@@ -295,6 +284,12 @@ void _TSTRBUF::_swap(TStrbuf& that)
 {
 	TString<CharT>::_swap(that);
 	std::swap(this->capacity_, that.capacity_);
+}
+
+template <typename CharT, typename Traits, typename Alloc>
+void _TSTRBUF::disp(FILE* fp) const
+{
+	fprintf(fp, "[0x%x][%d/%d]->%s", this->c_str(), this->length(), this->capacity(), this->c_str());
 }
 
 typedef TStrbuf<char> CStrbuf;

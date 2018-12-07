@@ -2,10 +2,11 @@
 #define TSTR_HPP__
 
 #include <string> // for char_traits
+#include <cstdio>
+#include "toperator.hpp"
+
 namespace utd
 {
-
-// using std::char_traits;
 
 /* 简单封装字符串指针的类
  * 无独立存储空间，信任指针目标，适用于静态文本或全局容器内的字符串
@@ -53,17 +54,15 @@ public:
 	{
 		return c_str() == that.c_str() || (length() == that.length() && Traits::compare(c_str(), that.c_str(), length()) == 0);
 	}
-	bool operator> (const TStr& that) const { return that < *this; }
-	bool operator<= (const TStr& that) const { return !(that < *this); }
-	bool operator>= (const TStr& that) const { return !(*this < that); }
-	bool operator!= (const TStr& that) const { return !(*this == that); }
+	bool operator< (const CharT* pthat) const { return *this < TStr(pthat); }
+	bool operator== (const CharT* pthat) const { return *this == TStr(pthat); }
 
 	// 判断前后缀
 	bool has_prefix(const TStr& that) const;
-	bool has_suffix(const TStr& that) const { return suffix_of(that) != -1; }
-	// 查找后缀的起始索引，不存在返回 -1
-	size_t suffix_of(const TStr& that) const;
+	bool has_suffix(const TStr& that) const;
 
+	// 用易于查看的方式打印对象
+	void disp(FILE* fp = stdout) const;
 protected:
 	// 数据布局：存字符串的长度与指针
 	size_t   length_;
@@ -94,7 +93,7 @@ bool _TSTR::has_prefix(const _TSTR& that) const
 }
 
 template <typename CharT, typename Traits>
-size_t _TSTR::suffix_of(const _TSTR& that) const
+bool _TSTR::has_suffix(const _TSTR& that) const
 {
 	if (that.empty()) {
 		return true;
@@ -107,6 +106,12 @@ size_t _TSTR::suffix_of(const _TSTR& that) const
 	const CharT *pThat = that.c_str(); 
 	const CharT *pThis = this->c_str() + this->length() - that.length();
 	return Traits::compare(pThis, pThat, that.length()) == 0;
+}
+
+template <typename CharT, typename Traits>
+void _TSTR::disp(FILE* fp) const
+{
+	fprintf(fp, "[0x%x][%d]->%s", c_str(), length(), c_str());
 }
 
 typedef TStr<char> CStr;

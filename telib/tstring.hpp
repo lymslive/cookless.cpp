@@ -8,27 +8,6 @@
 namespace utd
 {
 
-// 在末尾增加字符串
-template <typename StringT, typename StringU>
-const StringT operator+ (const StringT& lhs, const StringU& rhs)
-{
-	return StringT(lhs) += rhs;
-}
-
-// 只在末尾删除特定字符串
-template <typename StringT, typename StringU>
-const StringT operator- (const StringT& lhs, const StringU& rhs)
-{
-	return StringT(lhs) -= rhs;
-}
-
-// 与数字相乘：将当前字符串重复 x 倍
-template <typename StringT>
-const StringT operator* (const StringT& lhs, size_t rhs)
-{
-	return StringT(lhs) *= rhs;
-}
-
 /* 不可变字符串值类，数据布局同父类 TStr
  * 有独立空间字符串，构造时申请复制空间，不可再增长
  * 但每个字符可修改
@@ -62,7 +41,11 @@ public:
 	CharT& operator[] (size_t i) { return *(data() + i); }
 	CharT& operator[] (int i); // 允许负索引
 
-	// 操作符重载
+	/* 操作符重载
+	// +) 在末尾增加字符串
+	// -) 只在末尾删除特定字符串
+	// *) 与数字相乘，将当前字符串重复 x 倍
+	*/
 	TString& operator+= (const _TSTR& that) { return add_suffix(that); }
 	TString& operator-= (const _TSTR& that) { return sub_suffix(that); }
 	TString& operator+= (const CharT& chat) { return add_suffix(chat); }
@@ -190,13 +173,12 @@ _TSTRING& _TSTRING::sub_suffix(const _TSTR& that, const CharT* pSep)
 	if (that.empty() || this->emtpy()) {
 		return *this;
 	}
-	// 查看后缀的起始位置，直接抹 0 
-	size_t iPos = this->suffix_of(that);
-	if (iPos == -1 || iPos >= this->length_) {
+	if (!this->has_suffix(that)) {
 		return *this;
 	}
-	(*this)[iPos] = CharT(0);
-	this->length_ = iPos;
+	// 直接后缀的起始位置抹 0 
+	this->length_ -= that.length();
+	(*this)[this->length_] = CharT(0);
 	// 再抹除可能的后缀分隔符
 	if (pSep != NULL) {
 		sub_suffix(_TSTR(pSep));
