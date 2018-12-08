@@ -69,6 +69,11 @@ public:
 	size_t rfindsub(const CharT* pSep, size_t times = 1);
 	size_t rfindchar(const CharT& chat, size_t times = 1);
 
+	// 回车换行符
+	static CharT CR () { return CharT(13); } // mac
+	static CharT LF () { return CharT(10); } // unix
+	static const CharT* CRLF() { return "\r\n"; }
+
 	// 用易于查看的方式打印对象
 	void disp(FILE* fp = stdout) const;
 protected:
@@ -116,6 +121,7 @@ bool _TSTR::has_suffix(const _TSTR& that) const
 	return Traits::compare(pThis, pThat, that.length()) == 0;
 }
 
+// 非高效算法，pSep 不能太长
 template <typename CharT, typename Traits>
 size_t _TSTR::findsub(const CharT* pSep, size_t times)
 {
@@ -123,7 +129,7 @@ size_t _TSTR::findsub(const CharT* pSep, size_t times)
 	if (pSep == NULL ) { return -1; }
 	size_t nLength = Traits::length(pSep);
 	size_t iFound = 0, iPos = 0;
-	for (size_t i = 0; i < length_; ++i) {
+	for (size_t i = 0; i <= length_ - nLength; ++i) {
 		if (string_[i] == pSep[0]) {
 			iPos = i;
 			size_t j = 0;
@@ -136,8 +142,11 @@ size_t _TSTR::findsub(const CharT* pSep, size_t times)
 				if (++iFound == times) {
 					return iPos;
 				}
+				continue;
 			}
-			continue;
+			else {
+				i = iPos;
+			}
 		}
 	}
 	return -1;
@@ -164,21 +173,25 @@ size_t _TSTR::rfindsub(const CharT* pSep, size_t times)
 	if (times <= 0) { return -1; } 
 	if (pSep == NULL ) { return -1; }
 	size_t nLength = Traits::length(pSep);
-	size_t iFound = 0;
-	for (size_t i = length_ - 1; i > 0; --i) {
+	size_t iFound = 0, iPos = 0;
+	for (size_t i = length_ - 1; i >= nLength - 1; --i) {
 		if (string_[i] == pSep[nLength-1]) {
+			iPos = i;
 			size_t j = nLength-1;
 			while (j > 0) {
 				if (string_[--i] != pSep[--j]) {
 					break;
 				}
 			}
-			if (j ==0 && string_[i] == pSep(j)) {
+			if (j == 0 && string_[i] == pSep[j]) {
 				if (++iFound == times){
 					return i;
 				}
+				continue;
 			}
-			continue;
+			else {
+				i = iPos;
+			}
 		}
 	}
 	return -1;

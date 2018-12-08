@@ -24,6 +24,8 @@ int main(int argc, char *argv[])
 	DO_TAST(CStrTast, Usage);
 	DO_TAST(CStringTast, Usage);
 	DO_TAST(CStrbufTast, Usage);
+	DO_TAST(CStrTast, FindAlgo);
+	DO_TAST(CStringTast, ModifyAlgo);
 
 	return SEE_RESULT;
 }

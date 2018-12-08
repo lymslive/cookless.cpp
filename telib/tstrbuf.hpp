@@ -14,7 +14,6 @@ template <class CharT, typename Traits = std::char_traits<CharT>, typename Alloc
 class TStrbuf : public TString<CharT, Traits, Alloc>
 {
 public:
-
 	// 构造函数系列
 	~TStrbuf() { _free(); }
 	TStrbuf() {}
@@ -37,7 +36,7 @@ public:
 	TStrbuf& operator<< (const _TSTR that) { return append(that); }
 
 	// +-/ 运算语义类似 TString ，优化覆盖版
-	TStrbuf& operator+= (const _TSTR that) { return add_suffix(that); }
+	TStrbuf& operator+= (const _TSTR& that) { return add_suffix(that); }
 	TStrbuf& operator-= (const _TSTR& that) { return sub_suffix(that); }
 	TStrbuf& operator+= (const CharT& chat) { return add_suffix(chat); }
 	TStrbuf& operator-= (const CharT& chat) { return sub_suffix(chat); }
@@ -76,7 +75,6 @@ protected:
 	// 重新申请内存搬迁，有可能更小截断
 	void _realloc(size_t n);
 
-private:
 	size_t capacity_;
 }; // end of class TStrbuf
 

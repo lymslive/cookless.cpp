@@ -62,6 +62,9 @@ public:
 	TString& repeat(size_t times, const CharT* pSep = NULL);
 	TString& repart(size_t times, const CharT* pSep = NULL);
 
+	// 逆序转换
+	TString& reverse();
+
 protected:
 	CharT* _alloc(size_t n);
 	void _free();
@@ -254,6 +257,17 @@ _TSTRING& _TSTRING::repart(size_t times, const CharT* pSep)
 			(*this)[iPos] = CharT(0);
 			this->length_ = iPos;
 		}
+	}
+	return *this;
+}
+
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING& _TSTRING::reverse()
+{
+	CharT* pFirst = this->begin();
+	CharT* pLast = this->end();
+	while ((pFirst != pLast) && (pFirst != --pLast)) {
+		std::swap(*pFirst++, *pLast);
 	}
 	return *this;
 }

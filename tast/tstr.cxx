@@ -94,3 +94,60 @@ TAST(CStrTast, Usage)
 	SEE(str.has_suffix("G"), false);
 }
 
+TAST(CStrTast, FindAlgo)
+{
+	H1("测试搜索子串");
+	utd::CStr strLong = "abc.abc.abc";
+	utd::CStr strSub = "abc";
+	DISP(strLong);
+	DISP(strSub);
+
+	NOTE("情景：前缀 0 直接匹配");
+	SEE(strLong.findsub(strSub), 0);
+	SEE(strLong.rfindsub(strSub), 8);
+	SEE(strLong.findsub(strSub, 2), 4);
+	SEE(strLong.rfindsub(strSub, 2), 4);
+	SEE(strLong.findsub(strSub, 3), 8);
+	SEE(strLong.rfindsub(strSub, 3), 0);
+
+	NOTE("情景：首尾不能立即匹配");
+	strLong = "=abc.abc.abc=x";
+	DISP(strLong);
+	SEE(strLong.findsub(strSub), 1);
+	SEE(strLong.rfindsub(strSub), 9);
+	SEE(strLong.findsub(strSub, 2), 5);
+	SEE(strLong.rfindsub(strSub, 2), 5);
+
+	NOTE("情景：查单字符");
+	char chat = '.';
+	SEE(strLong.findchar(chat), 4);
+	SEE(strLong.rfindchar(chat), 8);
+	SEE(strLong.findchar(chat, 2), 8);
+	SEE(strLong.rfindchar(chat, 2), 4);
+
+	NOTE("情景：查询失败，可直接与 -1 比较");
+	SEE(strLong.findchar(chat, 3), size_t(-1));
+	SEE(strLong.rfindchar(chat, 3), -1);
+	SEE(strLong.findsub("abcd"), size_t(-1));
+	SEE(strLong.rfindsub("abcd"), -1);
+	SEE(strLong.rfindsub("c=c") == -1, true);
+
+	NOTE("情景：特殊案例");
+	strLong = "abc.ababbc.abc";
+	strSub = "ababb";
+	DISP(strLong);
+	DISP(strSub);
+	SEE(strLong.findsub(strSub), 4);
+
+	strLong = "abc.abababbc.abc";
+	DISP(strLong);
+	SEE(strLong.findsub(strSub), 6);
+	SEE(strLong.rfindsub(strSub), 6);
+
+	strLong = "cba.cbbababa.cba";
+	strSub = "bbaba";
+	DISP(strLong);
+	DISP(strSub);
+	SEE(strLong.findsub(strSub), 5);
+	SEE(strLong.rfindsub(strSub), 5);
+}

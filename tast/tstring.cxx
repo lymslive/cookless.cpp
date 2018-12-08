@@ -147,3 +147,63 @@ TAST(CStringTast, Usage)
 	SEE(repString.length(), 10);
 }
 
+TAST(CStringTast, ModifyAlgo)
+{
+	H1("一些修改字符串的操作算法");
+
+	H2("逆序字符串");
+	{
+		utd::CString objString = "abcdefghijklmnopqrstuvwxyz";
+		DISP(objString);
+		SEE(objString.length(), 26);
+
+		objString.reverse();
+		DISP(objString);
+		SEE(objString[0], 'z');
+
+		NOTE("减半，13 奇数长度，持续减半");
+		utd::CString midString = objString;
+		while (midString.length() > 2)
+		{
+			midString /= 2;
+			DISP(midString);
+			midString.reverse();
+			DISP(midString);
+		}
+	}
+
+	H2("切分字符串 repart");
+	{
+		utd::CString objString = "abcdefg--hijklmn--opq,rst--uvw,xyz";
+		DISP(objString);
+
+		MARK("repart 是保留前几部分，从头一起的，不是中间一段");
+		utd::CString cpyString = objString;
+		SEE(cpyString.repart(1, "--"));
+		DISP(cpyString);
+
+		cpyString = objString;
+		SEE(cpyString.repart(2, "--"));
+		DISP(cpyString);
+
+		cpyString = objString;
+		SEE(cpyString.repart(3, "--"));
+		DISP(cpyString);
+
+		cpyString = objString;
+		SEE(cpyString.repart(4, "--"));
+		DISP(cpyString);
+
+		cpyString = objString;
+		SEE(cpyString.repart(5, "--"));
+		DISP(cpyString);
+
+		cpyString = objString;
+		SEE(cpyString.repart(2, ","));
+		DISP(cpyString);
+
+		cpyString = objString;
+		SEE(cpyString.repart(3, ","));
+		DISP(cpyString);
+	}
+}
