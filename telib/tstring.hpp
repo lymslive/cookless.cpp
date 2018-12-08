@@ -43,14 +43,16 @@ public:
 
 	/* 操作符重载
 	// +) 在末尾增加字符串
-	// -) 只在末尾删除特定字符串
+	// -) 只在末尾删除特定字符串，加法逆运算
 	// *) 与数字相乘，将当前字符串重复 x 倍
+	// /) 与数字相除，乘法逆运算，只保留开始部分
 	*/
 	TString& operator+= (const _TSTR& that) { return add_suffix(that); }
 	TString& operator-= (const _TSTR& that) { return sub_suffix(that); }
 	TString& operator+= (const CharT& chat) { return add_suffix(chat); }
 	TString& operator-= (const CharT& chat) { return sub_suffix(chat); }
 	TString& operator*= (size_t times) { return repeat(times); }
+	TString& operator/= (size_t times) { return repart(times); }
 
 	// 操作符函数别名，在串接字符串时可额外指定一小段（固定）分隔符
 	TString& add_suffix(const _TSTR& that, const CharT* pSep = NULL);
@@ -58,6 +60,7 @@ public:
 	TString& add_suffix(const CharT& chat, const CharT* pSep = NULL);
 	TString& sub_suffix(const CharT& chat, const CharT* pSep = NULL);
 	TString& repeat(size_t times, const CharT* pSep = NULL);
+	TString& repart(size_t times, const CharT* pSep = NULL);
 
 protected:
 	CharT* _alloc(size_t n);
@@ -170,7 +173,7 @@ _TSTRING& _TSTRING::add_suffix(const CharT& chat, const CharT* pSep)
 template <typename CharT, typename Traits, typename Alloc>
 _TSTRING& _TSTRING::sub_suffix(const _TSTR& that, const CharT* pSep)
 {
-	if (that.empty() || this->emtpy()) {
+	if (that.empty() || this->empty()) {
 		return *this;
 	}
 	if (!this->has_suffix(that)) {
@@ -189,7 +192,7 @@ _TSTRING& _TSTRING::sub_suffix(const _TSTR& that, const CharT* pSep)
 template <typename CharT, typename Traits, typename Alloc>
 _TSTRING& _TSTRING::sub_suffix(const CharT& chat, const CharT* pSep)
 {
-	if (this->emtpy()) {
+	if (this->empty()) {
 		return *this;
 	}
 	if ((*this)[-1] != chat)
@@ -226,6 +229,32 @@ _TSTRING& _TSTRING::repeat(size_t times, const CharT* pSep)
 		dst += this->length();
 	}
 	_swap(objTemp);
+	return *this;
+}
+
+/* 切分字符串，两种工作方式
+ * pSep==NULL 无分隔符，按数字 times 整除向下取整截断，取第一部分
+ * pSep!=NULL 有分隔符，按分隔符切分串，取前 times 部分
+ *   取第 1 部分 times = 1，如果为 0 不切分
+ */
+template <typename CharT, typename Traits, typename Alloc>
+_TSTRING& _TSTRING::repart(size_t times, const CharT* pSep)
+{
+	if (pSep == NULL) {
+		if (times <= 1) {
+			return *this;
+		}
+		this->length_ /= times;
+		(*this)[this->length_] = CharT(0);
+	}
+	else {
+		size_t iPos = _TSTR::findsub(pSep, times);
+		if (iPos != -1)
+		{
+			(*this)[iPos] = CharT(0);
+			this->length_ = iPos;
+		}
+	}
 	return *this;
 }
 

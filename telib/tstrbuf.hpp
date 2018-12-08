@@ -19,8 +19,12 @@ public:
 	~TStrbuf() { _free(); }
 	TStrbuf() {}
 	TStrbuf(const TStrbuf& that) { _copy(that); }
+	// 首次从字符串构造，不留冗余空间，将容量同步为长度
 	TStrbuf(const CharT* pStr) : _TSTRING(pStr) { _capacity_syn(); }
 	TStrbuf(const _TSTR& that) : _TSTRING(that) { _capacity_syn(); }
+	TStrbuf(const CharT* pFirst, const CharT* pLast) : _TSTRING(pFirst, pLast) { _capacity_syn(); }
+	TStrbuf(size_t nLength, const CharT& chat) : _TSTRING(nLength, chat) { _capacity_syn(); }
+	// 预造一个指定容量但零长的字符串
 	TStrbuf(size_t nCap);
 
 	// 赋值操作符
@@ -38,6 +42,7 @@ public:
 	TStrbuf& operator+= (const CharT& chat) { return add_suffix(chat); }
 	TStrbuf& operator-= (const CharT& chat) { return sub_suffix(chat); }
 	TStrbuf& operator*= (size_t times) { return repeat(times); }
+	TStrbuf& operator/= (size_t times) { return repart(times); }
 	// 与数字相加：扩充容量；与数字相加：减少容量
 	TStrbuf& operator+= (size_t nCap) { return add_capacity(nCap); }
 	TStrbuf& operator-= (size_t nCap) { return sub_capacity(nCap); }
@@ -48,6 +53,7 @@ public:
 	TStrbuf& add_suffix(const CharT& chat, const CharT* pSep = NULL);
 	TStrbuf& sub_suffix(const CharT& chat, const CharT* pSep = NULL);
 	TStrbuf& repeat(size_t times, const CharT* pSep = NULL);
+	TStrbuf& repart(size_t times, const CharT* pSep = NULL);
 	TStrbuf& add_capacity(size_t nCap) { return reserve(nCap, +1); }
 	TStrbuf& sub_capacity(size_t nCap) { return reserve(nCap, -1); }
 
@@ -219,6 +225,13 @@ _TSTRBUF& _TSTRBUF::repeat(size_t times, const CharT* pSep)
 }
 
 template <typename CharT, typename Traits, typename Alloc>
+_TSTRBUF& _TSTRBUF::repart(size_t times, const CharT* pSep)
+{
+	_TSTRING::repart(times, pSep);
+	return *this;
+}
+
+template <typename CharT, typename Traits, typename Alloc>
 _TSTRBUF& _TSTRBUF::reserve(size_t nCap, int iRelative)
 {
 	if (iRelative > 0) {
@@ -289,7 +302,7 @@ void _TSTRBUF::_swap(TStrbuf& that)
 template <typename CharT, typename Traits, typename Alloc>
 void _TSTRBUF::disp(FILE* fp) const
 {
-	fprintf(fp, "[0x%x][%d/%d]->%s", this->c_str(), this->length(), this->capacity(), this->c_str());
+	fprintf(fp, "[0x%x][%d/%d]->%s", reinterpret_cast<size_t>(this->c_str()), this->length(), this->capacity(), this->c_str());
 }
 
 typedef TStrbuf<char> CStrbuf;

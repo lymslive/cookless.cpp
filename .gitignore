@@ -3,6 +3,6 @@
 *.a
 *.out
 lib/
-*.bak
+*.bak?
 third/*/
 Session*.vim

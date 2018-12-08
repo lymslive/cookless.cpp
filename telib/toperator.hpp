@@ -20,13 +20,13 @@ bool operator!= (const ThisT& lhs, const ThatT& rhs) { return !(lhs == rhs); }
 // +-*/ 用相应的 += 代替
 // 效率不是最高，但语义一致
 template <typename ThisT, typename ThatT>
-const ThisT operator+ (const ThisT& lhs, const ThatT& rhs) { return ThisT(lhs) += lhs; }
+const ThisT operator+ (const ThisT& lhs, const ThatT& rhs) { return ThisT(lhs) += rhs; }
 template <typename ThisT, typename ThatT>
-const ThisT operator- (const ThisT& lhs, const ThatT& rhs) { return ThisT(lhs) -= lhs; }
+const ThisT operator- (const ThisT& lhs, const ThatT& rhs) { return ThisT(lhs) -= rhs; }
 template <typename ThisT, typename ThatT>
-const ThisT operator* (const ThisT& lhs, const ThatT& rhs) { return ThisT(lhs) *= lhs; }
+const ThisT operator* (const ThisT& lhs, const ThatT& rhs) { return ThisT(lhs) *= rhs; }
 template <typename ThisT, typename ThatT>
-const ThisT operator/ (const ThisT& lhs, const ThatT& rhs) { return ThisT(lhs) /= lhs; }
+const ThisT operator/ (const ThisT& lhs, const ThatT& rhs) { return ThisT(lhs) /= rhs; }
 
 }
 

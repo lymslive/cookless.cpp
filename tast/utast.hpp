@@ -28,50 +28,62 @@ void _TFdisp(const char* pVar, T &var)
 
 #define _TAST_TRUE(b) ((b) ? "true" : "false")
 #define _TAST_PASS(p) ((p) ? "[PASS]" : "[FAIL]")
+
+// 打印备注文本
 #define println(format, ...) printf(format, ##__VA_ARGS__); printf("\n")
+#define NOTE(format, ...) do { printf("[NOTE] "); printf(format, ##__VA_ARGS__); printf("\n"); } while(0)
+#define MARK(format, ...) do { printf("[NOTE] "); printf(format, ##__VA_ARGS__); printf(" (%s:%d)\n", __FILE__, __LINE__); } while(0)
 
 // 串接成 g_f 函数，定义为测试函数
 #define TAST(g, f) void g ##_ ## f()
 #define DO_TAST(g, f) printf("\n[TAST] %s()\n", #g "_" #f); g ## _ ## f()
 
-// 全局统计变量
+// 全局统计变量，置于模板函数的静态变量中，便于包含头文件
+template <class SizeT>
 struct _STast
 {
-	int see_count;
-	int pass_count;
-	int fail_count;
+	SizeT see_count;
+	SizeT pass_count;
+	SizeT fail_count;
 
 	_STast () : see_count(0), pass_count(0), fail_count(0) {}
 };
-_STast _g_tast;
+template <class SizeT>
+_STast<SizeT>& _TFgetTast()
+{
+	static _STast<SizeT> st;
+	return st;
+}
+#define _G_TAST _TFgetTast<unsigned int>()
 
 // 测试宏，打印表达式及其值，可选输入预期值判断是否通过
-#define SEE(exp, ...) _TFseeout(#exp, (exp), ##__VA_ARGS__)
+#define SEE(exp, ...) _TFseeout(__FILE__, __LINE__, #exp, (exp), ##__VA_ARGS__)
 template <typename ResultT>
-void _TFseeout(const char* pExp, ResultT vExp)
+void _TFseeout(const char* pFile, int iLine, const char* pExp, ResultT vExp)
 {
 	std::cout << std::boolalpha; // 将 bool 输出 true/false
 	std::cout << "[SEE] " << pExp << " [OUT] " << vExp;
 	std::cout << std::endl << std::noboolalpha;
-	_g_tast.see_count++;
+	_G_TAST.see_count++;
 }
 
-template <typename ResultT>
-void _TFseeout(const char* pExp, ResultT vExp, ResultT vExpect)
+template <typename ResultT, typename ExpectT>
+void _TFseeout(const char* pFile, int iLine, const char* pExp, ResultT vExp, ExpectT vExpect)
 {
 	bool bPass = vExp == vExpect;
 	std::cout << std::boolalpha;
 	std::cout << "[SEE] " << pExp << " [OUT] " << vExp << " " << _TAST_PASS(bPass);
 	if (!bPass) {
 		std::cout << " [WANT] " << vExpect;
+		std::cout << " (" << pFile << ":" << iLine << ")";
 	}
 	std::cout << std::endl << std::noboolalpha;
-	_g_tast.see_count++;
+	_G_TAST.see_count++;
 	if (bPass) {
-		_g_tast.pass_count++;
+		_G_TAST.pass_count++;
 	}
 	else {
-		_g_tast.fail_count++;
+		_G_TAST.fail_count++;
 	}
 }
 
@@ -83,10 +95,10 @@ int _TFseeResult(T dummy)
 {
 	std::cout << std::endl;
 	H1("测试结果");
-	std::cout << "Tast See : " << _g_tast.see_count << std::endl;
-	std::cout << "Tast Pass: " << _g_tast.pass_count << std::endl;
-	std::cout << "Tast Fail: " << _g_tast.fail_count << std::endl;
-	return _g_tast.fail_count;
+	std::cout << "Tast See : " << _G_TAST.see_count << std::endl;
+	std::cout << "Tast Pass: " << _G_TAST.pass_count << std::endl;
+	std::cout << "Tast Fail: " << _G_TAST.fail_count << std::endl;
+	return _G_TAST.fail_count;
 }
 
 #endif /* end of include guard: UTAST_HPP__ */

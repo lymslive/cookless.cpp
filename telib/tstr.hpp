@@ -61,6 +61,14 @@ public:
 	bool has_prefix(const TStr& that) const;
 	bool has_suffix(const TStr& that) const;
 
+	// 从头查找一个子串或字符出现的位置
+	// 可选 times 指定第几次，找不到返回 -1
+	size_t findsub(const CharT* pSep, size_t times = 1);
+	size_t findchar(const CharT& chat, size_t times = 1);
+	// 从尾查找一个子串或字符出现的位置
+	size_t rfindsub(const CharT* pSep, size_t times = 1);
+	size_t rfindchar(const CharT& chat, size_t times = 1);
+
 	// 用易于查看的方式打印对象
 	void disp(FILE* fp = stdout) const;
 protected:
@@ -109,9 +117,92 @@ bool _TSTR::has_suffix(const _TSTR& that) const
 }
 
 template <typename CharT, typename Traits>
+size_t _TSTR::findsub(const CharT* pSep, size_t times)
+{
+	if (times <= 0) { return -1; } 
+	if (pSep == NULL ) { return -1; }
+	size_t nLength = Traits::length(pSep);
+	size_t iFound = 0, iPos = 0;
+	for (size_t i = 0; i < length_; ++i) {
+		if (string_[i] == pSep[0]) {
+			iPos = i;
+			size_t j = 0;
+			while (j < nLength) {
+				if (string_[++i] != pSep[++j]) {
+					break;
+				}
+			}
+			if (j == nLength) {
+				if (++iFound == times) {
+					return iPos;
+				}
+			}
+			continue;
+		}
+	}
+	return -1;
+}
+
+template <typename CharT, typename Traits>
+size_t _TSTR::findchar(const CharT& chat, size_t times)
+{
+	if (times <= 0) { return -1; } 
+	size_t iFound = 0;
+	for (size_t i = 0; i < length_; ++i) {
+		if (string_[i] == chat) {
+			if (++iFound == times) {
+				return i;
+			}
+		}
+	}
+	return -1;
+}
+
+template <typename CharT, typename Traits>
+size_t _TSTR::rfindsub(const CharT* pSep, size_t times)
+{
+	if (times <= 0) { return -1; } 
+	if (pSep == NULL ) { return -1; }
+	size_t nLength = Traits::length(pSep);
+	size_t iFound = 0;
+	for (size_t i = length_ - 1; i > 0; --i) {
+		if (string_[i] == pSep[nLength-1]) {
+			size_t j = nLength-1;
+			while (j > 0) {
+				if (string_[--i] != pSep[--j]) {
+					break;
+				}
+			}
+			if (j ==0 && string_[i] == pSep(j)) {
+				if (++iFound == times){
+					return i;
+				}
+			}
+			continue;
+		}
+	}
+	return -1;
+}
+
+template <typename CharT, typename Traits>
+size_t _TSTR::rfindchar(const CharT& chat, size_t times)
+{
+	if (times <= 0) { return -1; } 
+	size_t iFound = 0;
+	for (size_t i = length_; i > 0;) {
+		if (string_[--i] == chat) {
+			if (++iFound == times) {
+				return i;
+			}
+		}
+	}
+	return -1;
+}
+
+template <typename CharT, typename Traits>
 void _TSTR::disp(FILE* fp) const
 {
-	fprintf(fp, "[0x%x][%d]->%s", c_str(), length(), c_str());
+	fprintf(fp, "[0x%x][%d]->%s", reinterpret_cast<size_t>(c_str()), length(), c_str());
 }
 
 typedef TStr<char> CStr;
