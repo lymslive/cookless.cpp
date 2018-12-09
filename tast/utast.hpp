@@ -32,7 +32,7 @@ void _TFdisp(const char* pVar, T &var)
 // 打印备注文本
 #define println(format, ...) printf(format, ##__VA_ARGS__); printf("\n")
 #define NOTE(format, ...) do { printf("[NOTE] "); printf(format, ##__VA_ARGS__); printf("\n"); } while(0)
-#define MARK(format, ...) do { printf("[NOTE] "); printf(format, ##__VA_ARGS__); printf(" (%s:%d)\n", __FILE__, __LINE__); } while(0)
+#define MARK(format, ...) do { printf("[MARK] "); printf(format, ##__VA_ARGS__); printf(" (%s:%d)\n", __FILE__, __LINE__); } while(0)
 
 // 串接成 g_f 函数，定义为测试函数
 #define TAST(g, f) void g ##_ ## f()

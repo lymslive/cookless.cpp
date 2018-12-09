@@ -147,3 +147,61 @@ TAST(CStrbufTast, Usage)
 	SEE(repStrbuf.length(), 10);
 }
 
+TAST(CStrbufTast, Capacity)
+{
+	H1("测试 CStrbuf 容量相关功能");
+
+	NOTE("构造一定容量的字符串缓冲");
+	utd::CStrbuf objStrbuf(8);
+	DISP(objStrbuf);
+	SEE(objStrbuf.length(), 0);
+	SEE(objStrbuf.capacity(), 8);
+	SEE(objStrbuf.c_str() != NULL, true);
+
+	NOTE("附加字符串在容量范围内不改变空间");
+	const char* pOld = objStrbuf.c_str();
+	objStrbuf += "abcdefg";
+	DISP(objStrbuf);
+	SEE(objStrbuf.c_str() == pOld, true);
+
+	NOTE("用父类保存基类可行？");
+	utd::CString objString = objStrbuf;
+	DISP(objString);
+
+	NOTE("使用 << 运算符附加字符串，越容应该另申请空间");
+	objStrbuf << objString;
+	DISP(objStrbuf);
+	SEE(objStrbuf.c_str() == pOld, false);
+
+	NOTE("与数字+=相加扩容，但容量有圆整");
+	MARK("须得 size_t 类型的数字表容量，裸数字 int 与字符有歧义");
+	size_t nOld = objStrbuf.capacity();
+	pOld = objStrbuf.c_str();
+	objStrbuf += size_t(7);
+	DISP(objStrbuf);
+	SEE(objStrbuf.capacity() >= nOld + 7, true);
+	SEE(objStrbuf.c_str() == pOld, false);
+
+	NOTE("直接申请保留空间");
+	pOld = objStrbuf.c_str();
+	objStrbuf.reserve(50);
+	DISP(objStrbuf);
+	SEE(objStrbuf.capacity() >= 50, true);
+	SEE(objStrbuf.c_str() == pOld, false);
+
+	NOTE("与数字-=相减扩容");
+	nOld = objStrbuf.capacity();
+	pOld = objStrbuf.c_str();
+	objStrbuf -= size_t(6);
+	DISP(objStrbuf);
+	SEE(objStrbuf.capacity() >= nOld - 6, true);
+	SEE(objStrbuf.c_str() == pOld, false);
+
+	NOTE("缩减到适合字符串");
+	nOld = objStrbuf.capacity();
+	pOld = objStrbuf.c_str();
+	objStrbuf.shrink();
+	DISP(objStrbuf);
+	SEE(objStrbuf.capacity() == objStrbuf.length(), true);
+	SEE(objStrbuf.c_str() == pOld, false);
+}
