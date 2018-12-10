@@ -50,17 +50,29 @@ public:
 	static THString stable(const char* pStr) { return THString(pStr, true); }
 
 	// 字符串操作
-	const char* c_str();
-	const char* c_end();
-	char* begin();
-	char* end();
-
 	char* data();
 	size_t length();
 	size_t capacity();
+	bool empty();
 
-	const char& operator[](size_t i) const;
-	char& operator[](size_t i);
+	// 取首尾指针可能触发重整到首段空间
+	// 非 const 操作都可能会触发复制
+	const char* c_str() const { return const_cast<const char*>(data()); }
+	const char* c_end() const { return c_str() + length(); }
+	char* begin() { return data(); }
+	char* end() { return data() + length(); }
+
+	// 单索引不会触发重整空间，但 at 可能会触发复制
+	// 支持负索引
+	char& at(size_t i);
+	const char& of(size_t i) const;
+	char& at(int i);
+	const char& of(int i) const;
+
+	char& operator[](size_t i) { return at(i); }
+	const char& operator[](size_t i) const { return of(i); }
+	char& operator[](int i) { return at(i); }
+	const char& operator[](int i) const { return of(i); }
 
 	bool operator<(const THSring& that);
 	bool operator==(const THSring& that);
@@ -69,6 +81,8 @@ public:
 
 	THString& operator+=(const THSring& that);
 	THString& operator+=(const char* pthat);
+
+	THString& append(const char* pthat, size_t nLen);
 
 	// 将字符串拷出去
 	size_t copyto(char* dst, size_t nMax);
@@ -90,6 +104,7 @@ private:
 
 	uint8_t& _wlen() { return _rep.header.backward.wlen; }
 	uint8_t& _wcap() { return _rep.header.backward.wcap; }
+	char* _getptr(int p) {	return _rep.value[p].string_; }
 
 	// 栈上能储存的最大字符串
 	static int _max_local() { return (NFRAGMENT + 1) * 8 - 2; }
@@ -181,6 +196,326 @@ bool _THSTRING::mark_stable(bool bStable)
 	if (!islocal()) {
 		_rep.header.stable = 1;
 	}
+}
+
+template <int NFRAGMENT, typename Alloc>
+char* _THSTRING::data()
+{
+	if (islocal()) {
+		return &_local[1];
+	}
+	_merge();
+	return _rep.value[0].string_;
+}
+
+template <int NFRAGMENT, typename Alloc>
+size_t _THSTRING::length()
+{
+	if (islocal()) {
+		return _local[0];
+	}
+
+	if (isstable()) {
+		if (_rep.header.length < uint32_t(-1)) {
+			return _rep.header.length;
+		}
+		else {
+			return strlen(_getptr(0));
+		}
+	}
+
+	size_t nLen = 0;
+	for (int i = 0; i < NFRAGMENT; ++i) {
+		char* ptr = _getptr(i);
+		if (ptr != NULL) {
+			nLen += CBase::DecodeSize(ptr, _wlen());
+		}
+	}
+	return nLen;
+}
+
+template <int NFRAGMENT, typename Alloc>
+size_t _THSTRING::capacity()
+{
+	if (islocal()) {
+		return sizeof(_local - 2);
+	}
+
+	// 未申请自己的空间，容量应为 0
+	if (isstable()) {
+		return 0;
+	}
+
+	size_t nCap = 0;
+	for (int i = 0; i < NFRAGMENT; ++i) {
+		char* ptr = _getptr(i);
+		if (ptr != NULL) {
+			nCap += CBase::DecodeSize(ptr - _wlen(), _wcap());
+		}
+	}
+	return nCap;
+}
+
+template <int NFRAGMENT, typename Alloc>
+bool _THSTRING::empty()
+{
+	if (islocal()) {
+		return _local[0] == 0 || _local[1] == 0;
+	}
+
+	if (isstable()) {
+		return _getptr(0) == NULL;
+	}
+
+	for (int i = 0; i < NFRAGMENT; ++i) {
+		char* ptr = _getptr(i);
+		if (ptr != NULL && ptr[0] != '\0') {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+template <int NFRAGMENT, typename Alloc>
+char& _THSTRING::at(size_t i)
+{
+	if (!isalloc()) { _clone(); }
+	return const_cast<char&>(of(i));
+}
+
+template <int NFRAGMENT, typename Alloc>
+char& _THSTRING::at(int i)
+{
+	if (!isalloc()) { _clone(); }
+	return const_cast<char&>(of(i));
+}
+
+template <int NFRAGMENT, typename Alloc>
+const char& _THSTRING::of(size_t i) const
+{
+	size_t nAll = 0;
+	for (int p = 0; p < NFRAGMENT; ++p) {
+		char* ptr = _getptr(p);
+		if (ptr == NULL)
+		{
+			break;
+		}
+		size_t nLen = CBase::DecodeSize(ptr, _wlen());
+		if (i < nLen + nAll) {
+			return ptr[i - nAll];
+		}
+		nAll += nLen;
+	}
+
+	// error
+	return CBase::BackHole();
+}
+
+template <int NFRAGMENT, typename Alloc>
+const char& _THSTRING::of(int i) const
+{
+	if (i >= 0) {
+		return of(size_t(i));
+	}
+
+	// 负索引
+	i = -i;
+	size_t nAll = 0;
+	int p = NFRAGMENT;
+	for (p > 0) {
+		char* ptr = _getptr(--p);
+		if (ptr == NULL) {
+			continue;
+		}
+		size_t nLen = CBase::DecodeSize(ptr, _wlen());
+		if (i =< nLen + nAll) {
+			return ptr[nLen - (i - nAll)];
+		}
+		nAll += nLen;
+	}
+
+	// error
+	return CBase::BackHole();
+}
+
+template <int NFRAGMENT, typename Alloc>
+bool _THSTRING::operator<(const THSring& that)
+{
+	if (length() < that.length()) { return true };
+	if (that.length() < length()) { return false };
+	if (empty()) { return false; }
+
+	char* pThis = _getptr(0);
+	int nThis == 0;
+	char* pThat = that._getptr(0);
+	int nThat = 0;
+	while (1)
+	{
+		if (*pThis == 0)
+		{
+			if (++nThis < NFRAGMENT && _getptr(nThis) != NULL)
+			{
+				pThis = _getptr(nThis);
+			}
+		}
+		if (*pThat == 0)
+		{
+			if (++nThat < NFRAGMENT && that._getptr(nThat) != NULL)
+			{
+				pThat = that._getptr(nThat);
+			}
+		}
+		if (*pThis < *pThat)
+		{
+			return true;
+		}
+		if (*pThat < *pThis)
+		{
+			return false;
+		}
+		if (*pThis == 0 || *pThat == 0)
+		{
+			break;
+		}
+		++pThis;
+		++pThat;
+	}
+
+	return false;
+}
+
+template <int NFRAGMENT, typename Alloc>
+bool _THSTRING::operator==(const THSring& that)
+{
+	if (that.length() != length()) { return false };
+	if (empty()) { return true; }
+
+	char* pThis = _getptr(0);
+	int nThis == 0;
+	char* pThat = that._getptr(0);
+	int nThat = 0;
+	while (1)
+	{
+		if (*pThis == 0)
+		{
+			if (++nThis < NFRAGMENT && _getptr(nThis) != NULL)
+			{
+				pThis = _getptr(nThis);
+			}
+		}
+		if (*pThat == 0)
+		{
+			if (++nThat < NFRAGMENT && that._getptr(nThat) != NULL)
+			{
+				pThat = that._getptr(nThat);
+			}
+		}
+		if (*pThis != *pThat)
+		{
+			return false;
+		}
+		if (*pThis == 0 || *pThat == 0)
+		{
+			break;
+		}
+		++pThis;
+		++pThat;
+	}
+
+	return true;
+}
+
+template <int NFRAGMENT, typename Alloc>
+inline
+bool _THSTRING::operator<(const char* pthat)
+{
+	return (*this) < _THSTRING(pthat, true);
+}
+
+template <int NFRAGMENT, typename Alloc>
+inline
+bool _THSTRING::operator==(const char* pthat)
+{
+	return (*this) == _THSTRING(pthat, true);
+}
+
+template <int NFRAGMENT, typename Alloc>
+THString& _THSTRING::operator+=(const THSring& that)
+{
+	for (int i = 0; i < NFRAGMENT; ++i)
+	{
+		char* ptr = _getptr(i);
+		if (ptr != NULL && ptr[0] != '\0')
+		{
+			size_t nLen = CBase::DecodeSize(ptr, _wlen());
+			append(ptr, nLen);
+		}
+	}
+	return *this;
+}
+
+template <int NFRAGMENT, typename Alloc>
+inline
+THString& _THSTRING::operator+=(const char* pthat)
+{
+	return append(pthat, strlen(pthat));
+}
+
+template <int NFRAGMENT, typename Alloc>
+THString& _THSTRING::append(const char* pthat, size_t nNew)
+{
+	if (islocal())
+	{
+		nLen = _local[0];
+		if (nLen + nNew <= _max_local())
+		{
+			char* ptr = &_local[1];
+			strncpy(ptr + nLen, pthat, nNew);
+			_local[0] += nNew;
+			ptr[nLen+nNew] = '\0';
+		}
+		else
+		{
+			// 申请 nLen+nNew 空间
+		}
+		return *this;
+	}
+
+	if (isstable())
+	{
+		size_t nLen = length();
+		// 申请 nLen+nNew 空间
+	}
+
+	size_t nLen;
+	size_t nCap;
+	for (int i = NFRAGMENT; i-- > 0;) {
+		char* ptr = _getptr(i);
+		if (ptr == NULL) { continue; }
+
+		nLen = CBase::DecodeSize(ptr, _wlen());
+		nCap = CBase::DecodeSize(ptr - _wlen(), _wcap());
+		if (nLen + nNew < nCap) {
+			strcpy(ptr, pthat);
+		}
+		else {
+			if (++i < NFRAGMENT)
+			{
+				// 在下一个指针槽申请空间
+			}
+			else
+			{
+				// 在第一个指针槽扩容
+			}
+		}
+	}
+}
+
+template <int NFRAGMENT, typename Alloc>
+size_t _THSTRING::copyto(char* dst, size_t nMax)
+{
+	return 0;
 }
 
 template <int NFRAGMENT, typename Alloc>

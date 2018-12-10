@@ -2,6 +2,7 @@
 #define THSTRBASE_HPP__
 
 #include <cstdint> 
+#include <cstddef>
 
 // THString 的基类及相关辅助函数
 namespace utd
@@ -104,6 +105,7 @@ protected:
 	static void EncodeSize(const char* ptr, uint8_t iWide, size_t nSize);
 	static size_t MaxSize(uint8_t iWide) { return (1 << (iWide-1)*8) -1; }
 	static uint8_t SelectSize(size_t nLength);
+	static char& BackHole();
 };
 
 template <int NVERSION>
@@ -183,6 +185,13 @@ uint8_t _THSTRBASE::SelectSize(size_t nLength)
 			return iWide;
 		}
 	}
+}
+
+template <int NVERSION>
+char& _THSTRBASE::BackHole()
+{
+	static char chole;
+	return chole;
 }
 
 } /* utd */ 
