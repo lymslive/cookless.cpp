@@ -23,6 +23,14 @@ void TFencodeSize(const char* ptr, SizeT size)
 	*(static_cast<SizeT*>(ptr) - 1) = size;
 }
 
+template <typename NumberT>
+int TFnumberCompare(NumberT lhs, NumberT rhs)
+{
+	if (lhs < rhs) { return -1; }
+	if (rhs < lhs) { return +1; }
+	return 0;
+}
+
 // 伪模板基类
 #define _THSTRBASE THStrBase<NVERSION>
 template <int NVERSION>
@@ -67,6 +75,7 @@ protected:
 	};
 
 	// 后面 8 字节指针也可以用于保存非字符串数据
+	// 直接取最大精度的 64 位整数或双精度
 	// type 指示该存什么数据，默认字符串（指针）
 	enum EValueType
 	{
@@ -74,20 +83,14 @@ protected:
 		TVALUE_INT = 1,
 		TVALUE_UINT = 2,
 		TVALUE_DOUBLE = 3,
-		TVALUE_LONG = 4,
-		TVALUE_SIZE_IDX = 5,
-		TVALUE_VOID_PTR = 6,
 	};
 
 	union UValue
 	{
 		char* string_;
-		int iValue;
-		uint32_t uValue;
+		int64_t iValue;
+		uint64_t uValue;
 		double dValue;
-		int64_t lValue;
-		size_t nValue;
-		void* ptr;
 		char padding[8]; // 保证 8 字节长
 	};
 
@@ -106,6 +109,9 @@ protected:
 	static size_t MaxSize(uint8_t iWide) { return (1 << (iWide-1)*8) -1; }
 	static uint8_t SelectSize(size_t nLength);
 	static char& BackHole();
+
+	template <typename NumberT>
+	static NumberT GetValue(uint8_t type, UValue value);
 };
 
 template <int NVERSION>
@@ -135,7 +141,7 @@ size_t _THSTRBASE::DecodeCapacity(const char* ptr, const SBacker &stBack)
 template <int NVERSION>
 size_t _THSTRBASE::DecodeSize(const char* ptr, uint8_t iWide)
 {
-	if (ptr == NULL) { return 0; }
+	if (ptr == NULL || iWide == 0) { return 0; }
 	switch (iWide)
 	{
 	case 1:
@@ -155,7 +161,7 @@ size_t _THSTRBASE::DecodeSize(const char* ptr, uint8_t iWide)
 template <int NVERSION>
 void _THSTRBASE::EncodeSize(const char* ptr, uint8_t iWide, size_t nSize)
 {
-	if (ptr == NULL) { return; }
+	if (ptr == NULL || iWide == 0) { return; }
 	switch (iWide)
 	{
 		case 1:
@@ -192,6 +198,25 @@ char& _THSTRBASE::BackHole()
 {
 	static char chole;
 	return chole;
+}
+
+template <int NVERSION>
+template <typename NumberT>
+NumberT _THSTRBASE::GetValue(uint8_t type, UValue value)
+{
+	switch (type)
+	{
+		case TVALUE_STRING = 0:
+			return 0;
+		case TVALUE_INT = 1:
+			return NumberT(value.iValue);
+		case TVALUE_UINT = 2:
+			return NumberT(value.uValue);
+		case TVALUE_DOUBLE = 3:
+			return NumberT(value.dValue);
+		default:
+			return 0;
+	}
 }
 
 } /* utd */ 
