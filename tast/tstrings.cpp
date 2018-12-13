@@ -17,7 +17,7 @@ int predebug()
 	return 0;
 }
 
-int main(int argc, char *argv[])
+TAST_MAIN(int argc, char *argv[])
 {
 	// predebug();
 	DO_TAST(TStrsTast, Ctor);

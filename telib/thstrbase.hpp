@@ -1,7 +1,7 @@
 #ifndef THSTRBASE_HPP__
 #define THSTRBASE_HPP__
 
-#include <cstdint> 
+#include <cstdint> // C++11
 #include <cstddef>
 
 // THString 的基类及相关辅助函数
@@ -11,16 +11,16 @@ namespace utd
 // SizeT 是 1/2/4/8 字节的无符号整数
 template <class SizeT>
 inline 
-size_t TFdecodeSize(const char* ptr, SizeT*)
+size_t TFdecodeSize(const char* ptr, const SizeT*)
 {
-	return ptr == NULL ? 0 : *(static_cast<SizeT*>(ptr) - 1);
+	return ptr == NULL ? 0 : *(reinterpret_cast<const SizeT*>(ptr) - 1);
 }
 
 template <class SizeT>
 inline 
-void TFencodeSize(const char* ptr, SizeT size)
+void TFencodeSize(char* ptr, SizeT size)
 {
-	*(static_cast<SizeT*>(ptr) - 1) = size;
+	*(reinterpret_cast<SizeT*>(ptr) - 1) = size;
 }
 
 template <typename NumberT>
@@ -105,8 +105,8 @@ protected:
 	static size_t DecodeLength(const char* ptr, const SBacker &stBack);
 	static size_t DecodeCapacity(const char* ptr, const SBacker &stBack);
 	static size_t DecodeSize(const char* ptr, uint8_t iWide);
-	static void EncodeSize(const char* ptr, uint8_t iWide, size_t nSize);
-	static size_t MaxSize(uint8_t iWide) { return (1 << (iWide-1)*8) -1; }
+	static void EncodeSize(char* ptr, uint8_t iWide, size_t nSize);
+	static size_t MaxSize(uint8_t iWide) { return (1 << (iWide*8)) -1; }
 	static uint8_t SelectSize(size_t nLength);
 	static char& BackHole();
 
@@ -116,9 +116,9 @@ protected:
 
 template <int NVERSION>
 inline
-_THSTRBASE::SStrHeadValue _THSTRBASE::DecodeHead(const char* ptr, const SBacker &stBack)
+typename _THSTRBASE::SStrHeadValue _THSTRBASE::DecodeHead(const char* ptr, const SBacker &stBack)
 {
-	_THSTRBASE::SStrHeadValue stValue;
+	typename _THSTRBASE::SStrHeadValue stValue;
 	stValue.length = DecodeSize(ptr, stBack.wlen);
 	stValue.capacity = DecodeSize(ptr-stBack.wlen, stBack.wcap);
 	return stValue;
@@ -159,7 +159,7 @@ size_t _THSTRBASE::DecodeSize(const char* ptr, uint8_t iWide)
 }
 
 template <int NVERSION>
-void _THSTRBASE::EncodeSize(const char* ptr, uint8_t iWide, size_t nSize)
+void _THSTRBASE::EncodeSize(char* ptr, uint8_t iWide, size_t nSize)
 {
 	if (ptr == NULL || iWide == 0) { return; }
 	switch (iWide)
@@ -174,7 +174,7 @@ void _THSTRBASE::EncodeSize(const char* ptr, uint8_t iWide, size_t nSize)
 			return TFencodeSize(ptr, static_cast<uint64_t>(nSize));
 		default:
 			// error
-			return 0;
+			return;
 	}
 }
 
@@ -206,13 +206,13 @@ NumberT _THSTRBASE::GetValue(uint8_t type, UValue value)
 {
 	switch (type)
 	{
-		case TVALUE_STRING = 0:
+		case TVALUE_STRING:
 			return 0;
-		case TVALUE_INT = 1:
+		case TVALUE_INT:
 			return NumberT(value.iValue);
-		case TVALUE_UINT = 2:
+		case TVALUE_UINT:
 			return NumberT(value.uValue);
-		case TVALUE_DOUBLE = 3:
+		case TVALUE_DOUBLE:
 			return NumberT(value.dValue);
 		default:
 			return 0;

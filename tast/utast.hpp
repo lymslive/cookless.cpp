@@ -13,8 +13,10 @@ void _TFreportSection(const char* msg, int iHead, CharT ch)
 	while (i-->0) line[i] = ch;
 	printf("/* %s <H%d>%s</H%d> %s */\n", line, iHead, msg, iHead, line);
 }
-#define H1(s) _TFreportSection<char,10>(s, 1, '*')
-#define H2(s) _TFreportSection<char,10>(s, 2, '-')
+#define H1(s) _TFreportSection<char,10>(s, 1, '=');
+#define H2(s) _TFreportSection<char,10>(s, 2, '-');
+// HEAD 可以后面接一对 {} ，实现 if 控制运行，标题级数为 0 就运行这个块
+#define HEAD(n, s) if(n>0) {_TFreportSection<char,10>(s, n, '~');} if(n>0)
 
 // 打印一个对象，要求类型定义了 disp 方法
 template <typename T>
@@ -31,12 +33,13 @@ void _TFdisp(const char* pVar, T &var)
 
 // 打印备注文本
 #define println(format, ...) printf(format, ##__VA_ARGS__); printf("\n")
-#define NOTE(format, ...) do { printf("[NOTE] "); printf(format, ##__VA_ARGS__); printf("\n"); } while(0)
-#define MARK(format, ...) do { printf("[MARK] "); printf(format, ##__VA_ARGS__); printf(" (%s:%d)\n", __FILE__, __LINE__); } while(0)
+#define NOTE(format, ...) do { printf("[NOTE] "); printf(format, ##__VA_ARGS__); printf("\n"); } while(0);
+#define MARK(format, ...) do { printf("[MARK] "); printf(format, ##__VA_ARGS__); printf(" (%s:%d)\n", __FILE__, __LINE__); } while(0);
 
 // 串接成 g_f 函数，定义为测试函数
 #define TAST(g, f) void g ##_ ## f()
 #define DO_TAST(g, f) printf("\n[TAST] %s()\n", #g "_" #f); g ## _ ## f()
+#define TAST_MAIN int main
 
 // 全局统计变量，置于模板函数的静态变量中，便于包含头文件
 template <class SizeT>
