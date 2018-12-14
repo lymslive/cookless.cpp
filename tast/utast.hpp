@@ -28,8 +28,11 @@ void _TFdisp(const char* pVar, T &var)
 }
 #define DISP(s) _TFdisp(#s, (s))
 
+#define _PASS_COLOR "\e[1;32m"
+#define _FAIL_COLOR "\e[1;31m"
+#define _NONE_COLOR "\e[0m"
 #define _TAST_TRUE(b) ((b) ? "true" : "false")
-#define _TAST_PASS(p) ((p) ? "[PASS]" : "[FAIL]")
+#define _TAST_PASS(p) ((p) ? (_PASS_COLOR "[PASS]" _NONE_COLOR) : (_FAIL_COLOR "[FAIL]" _NONE_COLOR))
 
 // 打印备注文本
 #define println(format, ...) printf(format, ##__VA_ARGS__); printf("\n")

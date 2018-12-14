@@ -4,7 +4,7 @@ CXXFLAG = -Wformat
 # target: tscalar.out
 TSCALAR_CPP = tscalar.cpp
 # TSCALAR_CXX = tstr.cxx tstring.cxx tstrbuf.cxx
-TSCALAR_HPP = ../telib/thstrbase.hpp ../telib/tscalar.hpp
+TSCALAR_HPP = utast.hpp ../telib/thstrbase.hpp ../telib/tscalar.hpp
 TSCALAR_DEP = $(TSCALAR_CPP) $(TSCALAR_CXX) $(TSCALAR_HPP)
 tscalar.out : $(TSCALAR_DEP)
 	$(CC) $(CXXFLAG) -g -I .. -std=c++11 -o tscalar.out $(TSCALAR_CPP)

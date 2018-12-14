@@ -5,6 +5,7 @@
 lib/
 *.bak?
 *.bak
+*.log
 third/*/
 Session*.vim
 tags
